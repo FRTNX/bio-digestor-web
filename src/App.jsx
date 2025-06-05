@@ -81,7 +81,7 @@ function App() {
 
   const [data, setData] = useState({
     'time': '15:13',
-    'elapsed_time': '0 d 2 h 5 m 0 s',
+    'elapsed_time': '0 d 0 h 0 m 0 s',
     'temperature': 49.5,
     'pH': 6.800000000000008,
     'pump': true,
