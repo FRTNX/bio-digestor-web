@@ -129,7 +129,7 @@ function App() {
   const MicroController = () => (
     <div className='micro-controller'>
       <div className='sim-stats'>
-        <span style={{ paddingLeft: 5, fontFamily: 'monospace' }}>Status: <span style={{ background: status.color, color: 'black', padding: 3, borderRadius: 5 }}>{status.value}</span></span>
+        <span style={{ paddingLeft: 5, fontFamily: 'monospace' }}>Status: <span style={{ background: status.color || 'yellow', color: 'black', padding: 3, borderRadius: 5 }}>{status.value}</span></span>
 
       </div>
       <div className='mc-stats'>
