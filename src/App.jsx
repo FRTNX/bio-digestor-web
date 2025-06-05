@@ -45,9 +45,33 @@ function App() {
   const [status, setStatus] = useState({ value: 'Initialising', color: 'yellow' });
 
   // time series
-  const [ph, setPH] = useState([]);
-  const [temperature, setTemperature] = useState([])
-  const [acidValve, setAcidValve] = useState([])
+  const [ph, setPH] = useState([
+    { name: 6, pH: 8 },
+    { name: 5, pH: 1 },
+    { name: 2, pH: 7 },
+    { name: 7, pH: 8 },
+    { name: 6, pH: 4 },
+    { name: 10, pH: 14 },
+    { name: 8, pH: 9 },
+    { name: 8, pH: 15 },
+    { name: 9, pH: 12 },
+    { name: 14, pH: 12 }
+  ]);
+  const [temperature, setTemperature] = useState([
+    { name: 3, temperature: 2 },
+    { name: 9, temperature: 10 },
+    { name: 6, temperature: 8 },
+    { name: 6, temperature: 6 },
+    { name: 4, temperature: 11 },
+    { name: 7, temperature: 9 },
+    { name: 13, temperature: 10 },
+    { name: 8, temperature: 10 },
+    { name: 14, temperature: 12 },
+    { name: 15, temperature: 9 }
+  ])
+  const [acidValve, setAcidValve] = useState([
+    
+  ])
   const [baseValve, setBaseValve] = useState([])
 
   const [sim, setSim] = useState([])
@@ -254,7 +278,7 @@ function App() {
       <div className='components'>
         <div style={{ width: '50%', display: 'inline-block' }}>
           <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={generateData(['name', 'pH',])} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={ph} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
               <CartesianGrid stroke="#f5f5f5" />
@@ -266,7 +290,7 @@ function App() {
         </div>
         <div style={{ width: '50%', display: 'inline-block' }}>
           <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={generateData(['name', 'temperature'])} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={temperature} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
               <CartesianGrid stroke="#f5f5f5" />
@@ -278,7 +302,7 @@ function App() {
         </div>
         <div style={{ width: '50%', display: 'inline-block' }}>
           <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={generateData(['name', 'pH',])} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={ph} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
               <CartesianGrid stroke="#f5f5f5" />
@@ -290,7 +314,7 @@ function App() {
         </div>
         <div style={{ width: '50%', display: 'inline-block' }}>
           <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={generateData(['name', 'temperature'])} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={temperature} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
               <CartesianGrid stroke="#f5f5f5" />
