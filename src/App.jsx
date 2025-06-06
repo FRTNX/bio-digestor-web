@@ -205,7 +205,7 @@ function App() {
       </div>
       <div style={{ paddingLeft: 5, paddingTop: 5, fontFamily: 'monospace' }}>
         <span style={{ borderBottom: '1px solid white' }}>Info:</span><br />
-        <span style={{ color: 'yellow' }}>Kudzai Makatore</span><br />
+        <span style={{ color: 'yellow' }}>Kudzai Makotore</span><br />
         <span>Bio-Digestor Simulator</span>
       </div>
     </div>
