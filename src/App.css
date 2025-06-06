@@ -46,7 +46,7 @@
 
 
 .sim-container {
-  margin-top: 0px;
+  margin-top: 100px;
   padding-bottom: 50px;
 }
 
@@ -57,7 +57,7 @@
 .elapsed-time {
   display: inline-block;
   /* float: right; */
-  background-color: red;
+  background-color: rgba(174, 26, 26, 0.5);
   padding: 5px;
   margin-right: 15px;
   font-size: 18px;
@@ -84,19 +84,54 @@
   padding-right: 6px;
 }
 
-.ctrl-btn button {
+/* .ctrl-btn button {
   padding: 8px;
   padding-right: 12px;;
-}
+} */
 
 .sim-stats {
   padding-top: 5px;
 }
 
+.sim-settings {
+  display: inline-block;
+  font-size: 13px;
+  width: 62%;
+  max-width: 600px;
+}
+
+.quick-stats {
+  display: inline-block;
+  vertical-align: top;
+  margin-top: -180px;
+  font-size: 60px;
+  padding-left: 40px;
+}
+
+.sim-settings-2 {
+  display: inline-block;
+  font-size: 13px;
+  width: 100%;
+  max-width: 922px;
+}
+
+.ctrl {
+  display: inline-block;
+  min-width: 290px;
+  width: 25%;
+  vertical-align: top;
+  margin-top: -30px;
+}
+
+.component-graph {
+  width: 50%;
+  display: inline-block;
+}
+
 .sim-logs {
   border: 1px solid #3A3A3A;
   height: 240px;
-  overflow-y: scroll;
+  overflow-y:scroll;
 }
 
 .sim-log-entry {
@@ -225,17 +260,30 @@
   bottom: 75%;
 }
 
+@media (max-width: 1200px) {
+  .quick-stats {
+    display: none;
+  }
+}
+
+
 @media (max-width: 575px) {
   .micro-controller {
-    width: 100%;
-    border-radius: 15px;
+    width: 99%;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
   }
 
   .water-tank {
     width: 100%;
     height: 30em;
     border: .2em solid #3A3A3A;
-    border-radius: 15px;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
     box-sizing: border-box;
     position: relative;
   }
@@ -247,5 +295,20 @@
     overflow: hidden;
     border-bottom-left-radius: 15px;
     border-bottom-right-radius: 15px;
+  
   }
+
+  .component-graph {
+    width: 100%;
+  }
+
+  .sim-settings {
+    font-size: 13px;
+    width: 100%;
+  }
+  
+  .ctrl {
+    width: 100%;
+  }
+  
 }

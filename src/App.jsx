@@ -11,29 +11,45 @@ import {
   Legend
 } from 'recharts';
 
+import { Space, Slider } from 'antd';
+
 import { PiRadioButtonFill } from "react-icons/pi";
 
 import { BiPause, BiPlay, BiStop } from 'react-icons/bi';
 
 import './App.css';
 
-const random = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+import ReactSlider from 'react-slider';
+import styled from 'styled-components';
 
-const generateData = (params, variation = 10, rows = 10) => {
-  const d = [];
-  let minValue = 0;
-  let maxValue = variation;
-  for (let i = 0; i < rows; i++) {
-    const datapoint = {};
-    params.map((param) =>
-      datapoint[param] = random(minValue, maxValue)
-    )
-    d.push(datapoint)
-    minValue += 1;
-    maxValue += 1;
-  }
-  return d;
-};
+const StyledSlider = styled(ReactSlider)`
+    width: 100%;
+    height: 2px;
+`;
+
+const StyledThumb = styled.div`
+    height: 15px;
+    line-height: 15px;
+    width: 15px;
+    top: -6px;
+    text-align: center;
+    background-color: rgb(125, 131, 17);
+    color: grey;
+    border-radius: 50%;
+    border: none;
+    cursor: grab;
+`;
+
+const Thumb = (props, state) => <StyledThumb {...props}></StyledThumb>;
+
+const StyledTrack = styled.div`
+    top: 0;
+    bottom: 0;
+    background: ${props => (props.index === 2 ? '#f00' : props.index === 1 ? 'grey' : 'yellow')};
+    border-radius: 999px;
+`;
+
+const Track = (props, state) => <StyledTrack {...props} index={state.index} />;
 
 
 function App() {
@@ -42,37 +58,23 @@ function App() {
   const mobile = window.innerWidth < 500;
   const activeComponent = 'rgb(229, 194, 37)';
 
+  // settings
+  const [duration, setDuration] = useState(60 * 60 * 12)
+  const [updateInterval, setUpdateInterval] = useState(100);
+  const [timeStep, setTimeStep] = useState(10)
+  const [startingTemperature, setStartingTemperature] = useState(20)
+  const [startingPH, setStartingPH] = useState(8.8)
+
+
   const [status, setStatus] = useState({ value: 'Initialising', color: 'yellow' });
 
   // time series
-  const [ph, setPH] = useState([
-    { name: 6, pH: 8 },
-    { name: 5, pH: 1 },
-    { name: 2, pH: 7 },
-    { name: 7, pH: 8 },
-    { name: 6, pH: 4 },
-    { name: 10, pH: 14 },
-    { name: 8, pH: 9 },
-    { name: 8, pH: 15 },
-    { name: 9, pH: 12 },
-    { name: 14, pH: 12 }
-  ]);
-  const [temperature, setTemperature] = useState([
-    { name: 3, temperature: 2 },
-    { name: 9, temperature: 10 },
-    { name: 6, temperature: 8 },
-    { name: 6, temperature: 6 },
-    { name: 4, temperature: 11 },
-    { name: 7, temperature: 9 },
-    { name: 13, temperature: 10 },
-    { name: 8, temperature: 10 },
-    { name: 14, temperature: 12 },
-    { name: 15, temperature: 9 }
-  ])
-  const [acidValve, setAcidValve] = useState([
-    
-  ])
+  const [ph, setPH] = useState([]);
+  const [temperature, setTemperature] = useState([])
+  const [acidValve, setAcidValve] = useState([])
   const [baseValve, setBaseValve] = useState([])
+  const [agitator, setAgitator] = useState([])
+  const [pump, setPump] = useState([])
 
   const [sim, setSim] = useState([])
   const [logs, setLogs] = useState([
@@ -106,12 +108,22 @@ function App() {
         setTimeout(() => {
           setIndex((prevIndex) => prevIndex + 1);
           setData(sim[index]);
+
+          setTemperature(current => [...current, { temperature: sim[index].temperature }])
+          setPH(current => [...current, { pH: sim[index].pH }]);
+
+          setAcidValve(current => [...current, { acid: sim[index].acid_valve ? 1 : 0 }]);
+          setBaseValve(current => [...current, { base: sim[index].base_valve ? 1 : 0 }]);
+          setPump(current => [...current, { pump: sim[index].pump ? 1 : 0 }]);
+          setAgitator(current => [...current, { agitator: sim[index].agitator ? 1 : 0 }]);
+
+
           log(`got data: ${JSON.stringify(sim[index])}`)
         }, interval); // 2 seconds
       } else {
         clearInterval(intervalId);
         if (status.value !== 'Initialising') {
-          // setStatus({ value: 'Done', color: 'grey' })
+          setStatus({ value: 'Done', color: 'grey' })
         }
       }
     }, interval);
@@ -150,11 +162,25 @@ function App() {
     setLogs(current => [...current, text])
   }
 
+  const formatSeconds = (seconds) => {
+    let output = '';
+    const d = seconds / (24 * 3600);
+    const h = seconds % (24 * 3600) / 3600;
+    const m = (seconds % 3600) / 60
+    const s = seconds % 60
+
+    if (d >= 1) output += `${Number(d).toFixed(0)} d `;
+    if (h >= 1) output += `${Number(h).toFixed(0)} h `;
+    if (m >= 1) output += `${Number(m).toFixed(0)} m `;
+    if (s >= 1) output += `${Number(s).toFixed(0)} s `;
+
+    return output;
+  }
+
   const MicroController = () => (
     <div className='micro-controller'>
       <div className='sim-stats'>
         <span style={{ paddingLeft: 5, fontFamily: 'monospace' }}>Status: <span style={{ background: status.color || 'yellow', color: 'black', padding: 3, borderRadius: 5 }}>{status.value}</span></span>
-
       </div>
       <div className='mc-stats'>
         <PiRadioButtonFill style={{ color: data?.pump ? activeComponent : '' }} /><span className='component-stat'>Heat Pump</span><br />
@@ -173,7 +199,7 @@ function App() {
               </div>
             ))
           }
-          <div ref={consoleOutputRef} />
+          {/* <div ref={consoleOutputRef} /> */}
         </div>
 
       </div>
@@ -226,37 +252,101 @@ function App() {
   return (
     <>
       <div className='sim-container'>
-        <div>
-          <span className='sim-time'>{data?.time}</span>
+        <div className='ctrl'>
+          <div>
+            <span className='sim-time'>{data?.time}</span>
+          </div>
+          <div className='ctrl-area'>
+            <Space.Compact >
+              <button style={{ background: 'rgb(41, 141, 61, 0.5)', borderRight: '1px solid rgb(41, 141, 61, 0.5)' }}>
+                <BiPlay className='ctrl-icon' />
+                start
+              </button>
+              <button style={{ background: 'rgb(43, 44, 41)', }}>
+                <BiPause className='ctrl-icon' />
+                pause
+              </button>
+              <button style={{ background: 'rgba(174, 26, 26, 0.5)', borderLeft: '1px solid rgba(174, 26, 26, 0.5)' }}>
+                <BiStop className='ctrl-icon' />
+                stop
+              </button>
+            </Space.Compact>
+            <div style={{ paddingTop: 10 }}>
+              <div className='elapsed-label'>
+                <span>Elapsed Time</span>
+              </div>
+              <div className='elapsed-time'>
+                <span>{data?.elapsed_time}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className='ctrl-area'>
-          <div className='ctrl-btn'>
-            <button>
-              <BiPlay className='ctrl-icon' />
-              start
-            </button>
-          </div>
-          <div className='ctrl-btn'>
-            <button>
-              <BiPause className='ctrl-icon' />
-              pause
-            </button>
-          </div>   <div className='ctrl-btn'>
-            <button>
-              <BiStop className='ctrl-icon' />
-              stop
-            </button>
-          </div>
-          <div style={{ paddingTop: 10}}>
-            <div className='elapsed-label'>
-              <span>Elapsed Time</span>
-            </div>
-            <div className='elapsed-time'>
-              <span>{data?.elapsed_time}</span>
-            </div>
-
+        <div className='sim-settings'>
+          <span>Sim Duration:</span><span style={{ float: 'right' }}>{formatSeconds(duration)}</span><br />
+          <div style={{ paddingTop: 10, paddingBottom: 30 }}>
+            <StyledSlider
+              min={60}
+              max={60 * 60 * 24 * 30}
+              defaultValue={[60 * 60 * 12]}
+              renderTrack={Track} renderThumb={Thumb}
+              onAfterChange={(value) => setDuration(value)}
+              disabled={status.value === 'Active'}
+            />
           </div>
 
+          <span>Sim Update Interval:</span><span style={{ float: 'right' }}>{updateInterval} ms</span><br />
+          <div style={{ paddingTop: 10, paddingBottom: 30 }}>
+            <StyledSlider
+              min={50}
+              max={3000}
+              defaultValue={[100]}
+              renderTrack={Track} renderThumb={Thumb}
+              onAfterChange={(value) => setUpdateInterval(value)}
+              disabled={status.value === 'Active'}
+            />
+          </div>
+
+          <span>Time Step:</span><span style={{ float: 'right' }}>{timeStep} minutes</span><br />
+          <div style={{ paddingTop: 10, paddingBottom: 30 }}>
+            <StyledSlider
+              min={1}
+              max={60}
+              defaultValue={[5]}
+              renderTrack={Track} renderThumb={Thumb}
+              onAfterChange={(value) => setTimeStep(value)}
+              disabled={status.value === 'Active'}
+            />
+          </div>
+        </div>
+        <div className='sim-settings-2'>
+          <span>Starting Temperature:</span><span style={{ float: 'right' }}>{startingTemperature} ℃</span><br />
+          <div style={{ paddingTop: 10, paddingBottom: 30 }}>
+            <StyledSlider
+              min={20}
+              max={40}
+              defaultValue={[27]}
+              renderTrack={Track} renderThumb={Thumb}
+              onAfterChange={(value) => setStartingTemperature(value)}
+              disabled={status.value === 'Active'}
+            />
+          </div>
+
+          <span>Starting pH:</span><span style={{ float: 'right' }}>{startingPH}</span><br />
+          <div style={{ paddingTop: 10, paddingBottom: 30 }}>
+            <StyledSlider
+              min={1}
+              max={10}
+              defaultValue={[8.8]}
+              renderTrack={Track} renderThumb={Thumb}
+              onAfterChange={(value) => setStartingPH(value)}
+              disabled={status.value === 'Active'}
+            />
+          </div>
+        </div>
+        <div className='quick-stats'>
+       <span style={{ color: data?.temperature >= 55 ? 'green' : 'red' }}>{Number(data?.temperature).toFixed(1)} ℃</span>
+        <br />    
+        <span style={{ color: (data?.pH >= 6.8 && data?.pH < 7.2) ? 'green' : 'red' }}>{Number(data?.pH).toFixed(1)}</span>
         </div>
         {
           !mobile && (
@@ -276,50 +366,71 @@ function App() {
         }
       </div>
       <div className='components'>
-        <div style={{ width: '50%', display: 'inline-block' }}>
-          <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={ph} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <XAxis dataKey="name" />
-              <Tooltip />
-              <CartesianGrid stroke="#f5f5f5" />
-              <Line type="monotone" dataKey="pH" stroke="#fff" fill='#fff' yAxisId={0} />
-              {/* <Line type="monotone" dataKey="pv" stroke="#6f5e08" fill='#6f5e08' yAxisId={1} /> */}
-              <Legend />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div style={{ width: '50%', display: 'inline-block' }}>
+        <div className='component-graph'>
           <ResponsiveContainer width='100%' height={200}>
             <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={temperature} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
-              <CartesianGrid stroke="#f5f5f5" />
-              {/* <Line type="monotone" dataKey="uv" stroke="#fff" fill='#fff' yAxisId={0} /> */}
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
               <Line type="monotone" dataKey="temperature" stroke="#6f5e08" fill='#6f5e08' yAxisId={1} />
               <Legend />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ width: '50%', display: 'inline-block' }}>
+        <div className='component-graph' >
           <ResponsiveContainer width='100%' height={200}>
             <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={ph} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
-              <CartesianGrid stroke="#f5f5f5" />
-              <Line type="monotone" dataKey="pH" stroke="#fff" fill='#fff' yAxisId={0} />
-              {/* <Line type="monotone" dataKey="pv" stroke="#6f5e08" fill='#6f5e08' yAxisId={1} /> */}
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
+              <Line type="monotone" dataKey="pH" stroke="rgb(68, 105, 54)" fill='rgb(68, 105, 54)' yAxisId={0} />
               <Legend />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ width: '50%', display: 'inline-block' }}>
+
+        <div className='component-graph'>
           <ResponsiveContainer width='100%' height={200}>
-            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={temperature} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={acidValve} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <XAxis dataKey="name" />
               <Tooltip />
-              <CartesianGrid stroke="#f5f5f5" />
-              {/* <Line type="monotone" dataKey="uv" stroke="#fff" fill='#fff' yAxisId={0} /> */}
-              <Line type="monotone" dataKey="temperature" stroke="#6f5e08" fill='#6f5e08' yAxisId={1} />
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
+              <Line type="monotone" dataKey="acid" stroke="rgb(242, 251, 120)" fill='rgb(251, 192, 120)' yAxisId={1} />
+              <Legend />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className='component-graph' >
+          <ResponsiveContainer width='100%' height={200}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={baseValve} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <XAxis dataKey="name" />
+              <Tooltip />
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
+              <Line type="monotone" dataKey="base" stroke="rgb(54, 105, 102)" fill='rgb(54, 105, 102)' yAxisId={0} />
+              <Legend />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+
+        <div className='component-graph'>
+          <ResponsiveContainer width='100%' height={200}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={pump} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <XAxis dataKey="name" />
+              <Tooltip />
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
+              <Line type="monotone" dataKey="pump" stroke="rgb(144, 156, 214)" fill='rgb(144, 156, 214)' yAxisId={1} />
+              <Legend />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className='component-graph' >
+          <ResponsiveContainer width='100%' height={200}>
+            <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={agitator} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <XAxis dataKey="name" />
+              <Tooltip />
+              <CartesianGrid stroke="rgb(46, 44, 44)" />
+              <Line type="monotone" dataKey="agitator" stroke="rgb(154, 163, 151)" fill='rgb(68, 105, 54)' yAxisId={0} />
               <Legend />
             </LineChart>
           </ResponsiveContainer>
