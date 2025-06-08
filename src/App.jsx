@@ -339,7 +339,7 @@ function App() {
                   borderRight: '1px solid rgb(41, 141, 61, 0.5)'
                 }}
                 onClick={startSimulation}
-                disabled={status.value === 'active'}
+                disabled={status.value === 'Active'}
               >
                 <BiPlay className='ctrl-icon' />
                 start
