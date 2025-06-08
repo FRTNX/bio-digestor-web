@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { initEnv, tick } from './api/bio-digestor-api';
+import { runSimulation, ping } from './api/bio-digestor-api';
 
 import {
   ResponsiveContainer,
@@ -11,7 +11,7 @@ import {
   Legend
 } from 'recharts';
 
-import { Space, Slider } from 'antd';
+import { Space, Card } from 'antd';
 
 import { PiRadioButtonFill } from "react-icons/pi";
 
@@ -65,8 +65,11 @@ function App() {
   const [startingTemperature, setStartingTemperature] = useState(20)
   const [startingPH, setStartingPH] = useState(8.8)
 
-
+  const [index, setIndex] = useState(0);
   const [status, setStatus] = useState({ value: 'Initialising', color: 'yellow' });
+
+  const [paused, setPaused] = useState(false);
+  const [stopped, setStopped] = useState(false);
 
   // time series
   const [ph, setPH] = useState([]);
@@ -95,15 +98,12 @@ function App() {
   useEffect(() => {
     log('Initialising...')
     setStatus({ value: 'Initialising ' })
-    fetchSim();
+    connectToServer();
   }, []);
 
-  const [index, setIndex] = useState(0);
-
   useEffect(() => {
-    const interval = 50;
     const intervalId = setInterval(() => {
-      if (index < sim.length) {
+      if (index < sim.length && !paused && !stopped) {
         setStatus({ value: 'Active', color: 'green' })
         setTimeout(() => {
           setIndex((prevIndex) => prevIndex + 1);
@@ -117,19 +117,34 @@ function App() {
           setPump(current => [...current, { pump: sim[index].pump ? 1 : 0 }]);
           setAgitator(current => [...current, { agitator: sim[index].agitator ? 1 : 0 }]);
 
-
           log(`got data: ${JSON.stringify(sim[index])}`)
-        }, interval); // 2 seconds
-      } else {
+        }, updateInterval);
+      }
+
+      else if (paused && !stopped) {
+        clearInterval(intervalId);
+        setStatus({ value: 'Paused', color: 'yellow' })
+        log('Simulation paused.')
+      }
+
+      else if (stopped) {
+        clearInterval(intervalId);
+        setPaused(false);    // clean up
+        setStatus({ value: 'Done', color: 'grey' })
+        log('Simulation stopped.')
+      }
+
+      else {
         clearInterval(intervalId);
         if (status.value !== 'Initialising') {
           setStatus({ value: 'Done', color: 'grey' })
+          log('Simulation complete.')
         }
       }
-    }, interval);
+    }, updateInterval);
 
     return () => clearInterval(intervalId);
-  }, [index, sim]);
+  }, [index, sim, paused, stopped]);
 
   useEffect(() => {
     if (logs.length > 0) {
@@ -145,21 +160,81 @@ function App() {
     });
   };
 
-  const fetchSim = async () => {
-    const simulation = await initEnv();
-    console.log('env init result:', simulation)
-    if (simulation) {
-      setSim(simulation.data)
+  const reset = () => {
+    setData({
+      'time': '15:13',
+      'elapsed_time': '0 d 0 h 0 m 0 s',
+      'temperature': startingTemperature,
+      'pH': startingPH,
+      'pump': false,
+      'acid_valve': false,
+      'base_valve': false,
+      'agitator': false
+    });
+    setStatus({ value: 'Initialising', color: 'yellow' });
+    setIndex(0);
+    setTemperature([]);
+    setPH([]);
+    setAcidValve([]);
+    setBaseValve([]);
+    setPump([]);
+    setAgitator([]);
+  }
+
+  const connectToServer = async () => {
+    const result = await ping();
+    if (result.message) {
       log('Connected to server.')
-      log('Created sim environment.')
+      log('Ready to begin simulation.')
     } else {
-      log('Failed to connect to server')
-      setStatus({ value: 'Initialising', color: 'yellow' })
+      log('Failed to connect to server.')
+      log('Check your internet connection or reload page.')
     }
   }
 
+  const startSimulation = async () => {
+    if (paused) {
+      setPaused(false)
+      log('Simulation resumed.')
+    }
+
+    else {
+      reset();
+      setPaused(false);
+      setStopped(false);
+      const params = {
+        time_step: timeStep,
+        delta: duration,
+        starting_temperature: startingTemperature,
+        starting_pH: startingPH
+      };
+  
+      const simulation = await runSimulation(params);
+      console.log('env init result:', simulation)
+      if (simulation.data) {
+        setSim(simulation.data)
+        log('Ignition 🚀.')
+        log('Initilaising environment')
+        log('Initilaising components.')
+        log('Initilaising micro-controller.')
+        log('Running simulation.')
+      } else {
+        log('Error running simulation.')
+        setStatus({ value: 'Initialising', color: 'yellow' })
+      }
+    }
+  };
+
+  const pause = () => {
+    setPaused(true)
+  };
+
+  const stop = () => {
+    setStopped(true);
+  }
+
   const log = (text) => {
-    setLogs(current => [...current, text])
+    setLogs(current => [text, ...current])
   }
 
   const formatSeconds = (seconds) => {
@@ -188,24 +263,24 @@ function App() {
         <PiRadioButtonFill style={{ color: data?.base_valve ? activeComponent : '' }} /><span className='component-stat'>Base Valve</span><br />
         <PiRadioButtonFill style={{ color: data?.agitator ? activeComponent : '' }} /><span className='component-stat'>Agitator</span>
       </div>
-
-      <span style={{ paddingLeft: 5, fontFamily: 'monospace' }}>Logs:</span>
+      <span style={{ paddingLeft: 5, fontFamily: 'monospace' }}>Logs:</span><br />
+      <span style={{ paddingLeft: 5, fontFamily: 'monospace', fontSize: 10, color: 'grey' }}>* new logs appear on top (bubble-up algo)</span>
       <div className='sim-logs'>
         <div>
           {
             logs.map((log) => (
               <div style={{ lineHeight: 1.1 }}>
-                <span className='sim-log-entry'>{`> ${log}`}</span>
+                {/* <span className='sim-log-entry'>{`> ${log}`}</span> */}
+                <span className='sim-log-entry' style={{ color: 'grey' }}>{'> '}<span style={{ color: 'white' }}>{`${log}`}</span></span>
               </div>
             ))
           }
           {/* <div ref={consoleOutputRef} /> */}
         </div>
-
       </div>
       <div style={{ paddingLeft: 5, paddingTop: 5, fontFamily: 'monospace' }}>
         <span style={{ borderBottom: '1px solid white' }}>Info:</span><br />
-        <span style={{ color: 'yellow' }}>Kudzai Makotore</span><br />
+        <span style={{ color: 'yellow', fontWeight: 'bold' }}>Kudzai Makotore</span><br />
         <span>Bio-Digestor Simulator</span>
       </div>
     </div>
@@ -216,7 +291,7 @@ function App() {
       <div className='bd-stats'>
         <span>pH: <span style={{ color: (data?.pH >= 6.8 && data?.pH < 7.2) ? 'green' : 'red' }}>{Number(data?.pH).toFixed(1)}</span></span>
         <br />
-        <span>Temperature: <span style={{ color: data?.temperature >= 55 ? 'green' : 'red' }}>{Number(data?.temperature).toFixed(1)} ℃</span></span>
+        <span>Temperature: <span style={{ color: (data.temperature >= 52 && data.temperature <= 58) ? 'green' : 'red' }}>{Number(data?.temperature).toFixed(1)} ℃</span></span>
       </div>
 
       <div className="liquid">
@@ -233,13 +308,13 @@ function App() {
             </linearGradient>
           </defs>
           <path fill="url(#waterGradient)" d="
-  M 0,0 v 100 h 200 v -100 
-  c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
-  c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
-  c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
-  c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
-  
-"/>
+            M 0,0 v 100 h 200 v -100 
+            c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
+            c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
+            c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
+            c -10,0 -15,5 -25,5 c -10,0 -15,-5 -25,-5
+            
+          "/>
         </svg>
       </div>
       <div className="indicator" data-value="75"></div>
@@ -258,15 +333,33 @@ function App() {
           </div>
           <div className='ctrl-area'>
             <Space.Compact >
-              <button style={{ background: 'rgb(41, 141, 61, 0.5)', borderRight: '1px solid rgb(41, 141, 61, 0.5)' }}>
+              <button
+                style={{
+                  background: 'rgb(41, 141, 61, 0.5)',
+                  borderRight: '1px solid rgb(41, 141, 61, 0.5)'
+                }}
+                onClick={startSimulation}
+                disabled={status.value === 'active'}
+              >
                 <BiPlay className='ctrl-icon' />
                 start
               </button>
-              <button style={{ background: 'rgb(43, 44, 41)', }}>
+              <button
+                style={{ background: 'rgb(43, 44, 41)', }}
+                onClick={pause}
+                disabled={status.value !== 'Active'}
+                >
                 <BiPause className='ctrl-icon' />
                 pause
               </button>
-              <button style={{ background: 'rgba(174, 26, 26, 0.5)', borderLeft: '1px solid rgba(174, 26, 26, 0.5)' }}>
+              <button
+               style={{
+                background: 'rgba(174, 26, 26, 0.5)',
+                borderLeft: '1px solid rgba(174, 26, 26, 0.5)'
+                }}
+                onClick={stop}
+                disabled={status.value !== 'Active' && status.value !== 'Paused'}
+                >
                 <BiStop className='ctrl-icon' />
                 stop
               </button>
@@ -285,8 +378,8 @@ function App() {
           <span>Sim Duration:</span><span style={{ float: 'right' }}>{formatSeconds(duration)}</span><br />
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
-              min={60}
-              max={60 * 60 * 24 * 30}
+              min={60 * 60 * 2}
+              max={60 * 60 * 24 * 10}
               defaultValue={[60 * 60 * 12]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setDuration(value)}
@@ -297,7 +390,7 @@ function App() {
           <span>Sim Update Interval:</span><span style={{ float: 'right' }}>{updateInterval} ms</span><br />
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
-              min={50}
+              min={10}
               max={3000}
               defaultValue={[100]}
               renderTrack={Track} renderThumb={Thumb}
@@ -322,9 +415,9 @@ function App() {
           <span>Starting Temperature:</span><span style={{ float: 'right' }}>{startingTemperature} ℃</span><br />
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
-              min={20}
-              max={40}
-              defaultValue={[27]}
+              min={10}
+              max={50}
+              defaultValue={[startingTemperature]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setStartingTemperature(value)}
               disabled={status.value === 'Active'}
@@ -344,9 +437,9 @@ function App() {
           </div>
         </div>
         <div className='quick-stats'>
-       <span style={{ color: data?.temperature >= 55 ? 'green' : 'red' }}>{Number(data?.temperature).toFixed(1)} ℃</span>
-        <br />    
-        <span style={{ color: (data?.pH >= 6.8 && data?.pH < 7.2) ? 'green' : 'red' }}>{Number(data?.pH).toFixed(1)}</span>
+          <span style={{ color: (data?.temperature >= 52 && data.temperature <= 58) ? 'green' : 'red' }}>{Number(data?.temperature).toFixed(1)} ℃</span>
+          <br />
+          <span style={{ color: (data?.pH >= 6.8 && data?.pH < 7.2) ? 'green' : 'red' }}>{Number(data?.pH).toFixed(1)}</span>
         </div>
         {
           !mobile && (
@@ -412,7 +505,6 @@ function App() {
           </ResponsiveContainer>
         </div>
 
-
         <div className='component-graph'>
           <ResponsiveContainer width='100%' height={200}>
             <LineChart width={mobile ? (window.innerWidth - 30) : 330} height={200} data={pump} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -436,6 +528,25 @@ function App() {
           </ResponsiveContainer>
         </div>
       </div>
+      {
+        status.value === 'Done' && (
+          <div style={{ paddingTop: 50, paddingBottom: 50 }}>
+            <Card
+              style={{ background: 'rgb(0,0,0)', color: 'rgb(163, 163, 163)', border: 'none' }}
+              title={<span style={{ color: 'rgb(163, 163, 163)' }}>Results</span>}
+            >
+              <ul>
+                <li>{`Simulation ran for ${data.elapsed_time}.`}</li>
+                <li>{`Getting the slurry to an optimum temperature of 55 ℃ took 22 minutes from a starting temperature of 20 ℃.`}</li>
+                <li>{`Acid valve was activated once.`}</li>
+                <li>{`Base valve was activated 11 times.`}</li>
+                <li>{`Heat pump was activated 5 times.`}</li>
+                <li>{`Agitator was activated 12 times.`}</li>
+              </ul>
+            </Card>
+          </div>
+        )
+      }
     </>
   )
 }

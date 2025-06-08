@@ -1,14 +1,15 @@
 const BASE_URL = 'https://bio-digestor-sim.onrender.com';
 // const BASE_URL = 'http://localhost:8002';
 
-const initEnv = async () => {
+const runSimulation = async (params) => {
     try {
         const response = await fetch(`${BASE_URL}/bd/init`, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify(params)
         });
         return await response.json()
     } catch (error) {
@@ -16,9 +17,9 @@ const initEnv = async () => {
     }
 };
 
-const tick = async (envId) => {
+const ping = async () => {
     try {
-        const response = await fetch(`${BASE_URL}/bd/tick?environment_id=${envId}`, {
+        const response = await fetch(`${BASE_URL}/bd/ping`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -33,6 +34,6 @@ const tick = async (envId) => {
 
 
 export {
-    initEnv,
-    tick
+    runSimulation,
+    ping
 };
