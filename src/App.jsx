@@ -59,9 +59,9 @@ function App() {
   const activeComponent = 'rgb(229, 194, 37)';
 
   // settings
-  const [duration, setDuration] = useState(60 * 60 * 12)
-  const [updateInterval, setUpdateInterval] = useState(100);
-  const [timeStep, setTimeStep] = useState(10)
+  const [duration, setDuration] = useState(60 * 60 * 24)
+  const [updateInterval, setUpdateInterval] = useState(10);
+  const [timeStep, setTimeStep] = useState(5)
   const [startingTemperature, setStartingTemperature] = useState(20)
   const [startingPH, setStartingPH] = useState(8.8)
 
@@ -94,6 +94,16 @@ function App() {
     'base_valve': false,
     'agitator': true
   });
+
+  const [results, setResults] = useState({
+    activations: {
+      pump: 0,
+      agitator: 0,
+      acid_valve: 0,
+      base_valve: 0
+    },
+    optimum_temperature_delta: 0
+  })
 
   useEffect(() => {
     log('Initialising...')
@@ -212,7 +222,8 @@ function App() {
       const simulation = await runSimulation(params);
       console.log('env init result:', simulation)
       if (simulation.data) {
-        setSim(simulation.data)
+        setSim(simulation.data['time_series'])
+        setResults(simulation.data['sim_results'])
         log('Ignition 🚀.')
         log('Initilaising environment')
         log('Initilaising components.')
@@ -380,7 +391,7 @@ function App() {
             <StyledSlider
               min={60 * 60 * 2}
               max={60 * 60 * 24 * 10}
-              defaultValue={[60 * 60 * 12]}
+              defaultValue={[duration]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setDuration(value)}
               disabled={status.value === 'Active'}
@@ -390,9 +401,9 @@ function App() {
           <span>Sim Update Interval:</span><span style={{ float: 'right' }}>{updateInterval} ms</span><br />
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
-              min={10}
+              min={5}
               max={3000}
-              defaultValue={[100]}
+              defaultValue={[updateInterval]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setUpdateInterval(value)}
               disabled={status.value === 'Active'}
@@ -403,8 +414,8 @@ function App() {
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
               min={1}
-              max={60}
-              defaultValue={[5]}
+              max={15}
+              defaultValue={[timeStep]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setTimeStep(value)}
               disabled={status.value === 'Active'}
@@ -429,7 +440,7 @@ function App() {
             <StyledSlider
               min={1}
               max={10}
-              defaultValue={[8.8]}
+              defaultValue={[startingPH]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setStartingPH(value)}
               disabled={status.value === 'Active'}
@@ -537,11 +548,20 @@ function App() {
             >
               <ul>
                 <li>{`Simulation ran for ${data.elapsed_time}.`}</li>
-                <li>{`Getting the slurry to an optimum temperature of 55 ℃ took 22 minutes from a starting temperature of 20 ℃.`}</li>
-                <li>{`Acid valve was activated once.`}</li>
-                <li>{`Base valve was activated 11 times.`}</li>
-                <li>{`Heat pump was activated 5 times.`}</li>
-                <li>{`Agitator was activated 12 times.`}</li>
+                {
+                  results.optimum_temperature_delta && (
+                    <li>{`Getting the slurry to an optimum temperature of 55 ℃ took ${results.optimum_temperature_delta} minutes from a starting temperature of ${startingTemperature} ℃.`}</li>
+                  )
+                }
+                {
+                  !results.optimum_temperature_delta && (
+                <li>{`Optimum temperature of 55 ℃ was never reached.`}</li>
+                  )
+                }
+                <li>{`Acid valve was activated ${results.activations.acid_valve} times.`}</li>
+                <li>{`Base valve was activated ${results.activations.base_valve} times.`}</li>
+                <li>{`Heat pump was activated ${results.activations.pump} times.`}</li>
+                <li>{`Agitator was activated ${results.activations.agitator} times.`}</li>
               </ul>
             </Card>
           </div>
