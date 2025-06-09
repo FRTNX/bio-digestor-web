@@ -62,8 +62,9 @@ function App() {
   const [duration, setDuration] = useState(60 * 60 * 24)
   const [updateInterval, setUpdateInterval] = useState(10);
   const [timeStep, setTimeStep] = useState(5)
-  const [startingTemperature, setStartingTemperature] = useState(20)
-  const [startingPH, setStartingPH] = useState(8.8)
+
+  const [startingTemperature, setStartingTemperature] = useState(27)
+  const [startingPH, setStartingPH] = useState(6)
 
   const [index, setIndex] = useState(0);
   const [status, setStatus] = useState({ value: 'Initialising', color: 'yellow' });
@@ -414,7 +415,7 @@ function App() {
           <div style={{ paddingTop: 10, paddingBottom: 30 }}>
             <StyledSlider
               min={1}
-              max={15}
+              max={5}
               defaultValue={[timeStep]}
               renderTrack={Track} renderThumb={Thumb}
               onAfterChange={(value) => setTimeStep(value)}
